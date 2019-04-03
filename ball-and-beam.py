@@ -54,6 +54,7 @@ class ArduinoConnector:
     def send_rec(self, msg):
         self.ser.write((msg + "\n").encode())
 
+
 class BallAndBeam:
     def __init__(self, x_center, y_center):
         self.x_center = x_center
@@ -94,7 +95,7 @@ class PID:
         p = self.compute_proportional(error)
         i = self.compute_integral()
         d = self.compute_derivative()
-        angle =  self.add_balance_angle(self.kp*p + self.ki*i + self.kd*d)
+        angle = self.add_balance_angle(self.kp*p + self.ki*i + self.kd*d)
         return angle
 
     def add_balance_angle(self, alpha):
@@ -129,15 +130,19 @@ class PID:
             self.derivative = 0
         return self.derivative
 
+
 def millis():
     return int(round(time.time() * 1000))
 
+
 def display_txt(frame, txt, position):
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_size = 0.6
+    font_size = 0.5
     line_colour = (0, 0, 255)
     thickness = 2
-    cv2.putText(frame, txt, position, font, font_size, line_colour, thickness, cv2.LINE_4)
+    cv2.putText(frame, txt, position, font, font_size,
+                line_colour, thickness, cv2.LINE_4)
+
 
 def main():
     buffer_size = 64
@@ -200,17 +205,31 @@ def main():
                 pid.data.append(error)
 
                 servo_angle = pid.compute_angle(error)
-
                 arduino_connector.send_rec(str(servo_angle))
 
+                upper_left_column = [
+                    f'p: {error:.2f}',
+                    f'i: {pid.integral:.2f}',
+                    f'd: {pid.derivative:.2f}'
+                ]
+                upper_right_column = [
+                    f'kp*p: {pid.kp*error:.2f}',
+                    f'ki*i: {pid.ki*pid.integral:.2f}',
+                    f'kd*d: {pid.kd*pid.derivative:.2f}'
+                ]
 
-                display_txt(frame, f'p: {error:.2f}', (10, 20))
-                display_txt(frame, f'i: {pid.integral:.2f}', (10, 50))
-                display_txt(frame, f'd: {pid.derivative:.2f}', (10, 80))
-                display_txt(frame, f'kp*p: {pid.kp*error:.2f}', (200, 20))
-                display_txt(frame, f'ki*i: {pid.ki*pid.integral:.2f}', (200, 50))
-                display_txt(frame, f'kd*d: {pid.kd*pid.derivative:.2f}', (200, 80))
-                display_txt(frame, f'servo_angle: {servo_angle}', (10, 220))
+                left_column_x = 10
+                right_column_x = 200
+                column_y = 20
+                for i in range(len(upper_left_column)):
+                    display_txt(
+                        frame, upper_left_column[i], (left_column_x, column_y))
+                    display_txt(
+                        frame, upper_right_column[i], (right_column_x, column_y))
+                    column_y += 30
+
+                display_txt(
+                    frame, f'servo_angle: {servo_angle}', (left_column_x, 220))
 
                 # only proceed if the radius meets a minimum size
                 if radius > 10:
@@ -229,8 +248,8 @@ def main():
             if key == ord("q"):
                 break
 
-        # stop the camera video stream
-        cap.stop()
+        # release the camera video capture
+        cap.release()
         # close all windows
         cv2.destroyAllWindows()
 
